@@ -1,4 +1,4 @@
-import boto3  # helps to connect all aws services
+import boto3 
 import json
 import os
 import base64

@@ -16,7 +16,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.document_loaders import PyPDFDirectoryLoader
 
 ## Vector Embedding and Vector Store
-from langchain.vectorstores import FAISS   ## faiss cpu 
+from langchain.vectorstores import FAISS  
 
 ## LLM Models from Langchain 
 from langchain.prompts import PromptTemplate
@@ -31,24 +31,39 @@ bedrock_embeddings = BedrockEmbeddings(model_id = "amazon.titan-embed-text-v1", 
 
 ## Data ingestion
 def data_ingestion():
-    loader=PyPDFDirectoryLoader("data")
-    documents=loader.load()
-
-    # - in our testing Character split works better with this PDF data set
-    text_splitter=RecursiveCharacterTextSplitter(chunk_size=10000,
-                                                 chunk_overlap=1000)
+    loader = PyPDFDirectoryLoader("data")
+    try:
+        documents = loader.load()
+        if not documents:
+            raise ValueError("No PDF files were found in the 'data' directory.")
+        print(f"Loaded {len(documents)} document(s).")
+    except Exception as e:
+        raise RuntimeError(f"Error loading documents: {e}")
     
-    docs=text_splitter.split_documents(documents)
+    # Split documents into chunks for processing
+    try:
+        text_splitter = RecursiveCharacterTextSplitter(chunk_size=10000, chunk_overlap=1000)
+        docs = text_splitter.split_documents(documents)
+        if not docs:
+            raise ValueError("Text splitting returned no chunks. Check the splitter configuration.")
+        print(f"Generated {len(docs)} document chunks.")
+    except Exception as e:
+        raise RuntimeError(f"Error splitting documents: {e}")
+    
     return docs
 
-
-## Vector Embedding and Vectore store 
+## Vector Embedding and Vector Store 
 def get_vector_store(docs):
-    vectorstore_faiss = FAISS.from_documents(
-        docs, 
-        bedrock_embeddings
-    )
-    vectorstore_faiss.save_local('faiss_index')
+    if not docs:
+        raise ValueError("No documents provided for embedding. Please check the ingestion process.")
+    
+    try:
+        print("Generating embeddings for documents...")
+        vectorstore_faiss = FAISS.from_documents(docs, bedrock_embeddings)
+        vectorstore_faiss.save_local('faiss_index')
+        print("Vector store successfully created and saved locally.")
+    except Exception as e:
+        raise RuntimeError(f"Error during vector store creation: {e}")
 
 ## Define LLMs
 def get_Jurassic_llm():
@@ -124,8 +139,6 @@ def main():
     
     st.header("Chat with PDF using AWS Bedrock💁")
     user_question = st.text_input("Ask a Question from the PDF Files")
-
-    # Summarize= st.button("Summarization")
 
     with st.sidebar:
         st.title("Update Or Create Vector Store:")
