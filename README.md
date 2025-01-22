@@ -1,4 +1,3 @@
-# AWS-Bedrock
 
 ## PDF Chat and Summarization App
 
